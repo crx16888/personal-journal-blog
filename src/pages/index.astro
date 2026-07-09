@@ -2,251 +2,127 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import { onlyPublished, sortByDateDesc, formatDate } from "../lib/content";
-import { friends, moments, photos, projects, site, socials } from "../data/site";
+import { moments, photos, projects, site, socials } from "../data/site";
 
-const posts = sortByDateDesc(onlyPublished(await getCollection("blog"))).slice(0, 6);
-const notes = sortByDateDesc(onlyPublished(await getCollection("notes"))).slice(0, 6);
-const stats = [
-  ["128", "Followers"],
-  ["12", "Repos"],
-  ["07", "Writing"],
-  ["2026", "Since"]
-];
-const skills = [
-  ["ai-workflow/", "AI product builder", "Prompt systems", "Automation"],
-  ["content-stack/", "Astro publisher", "Markdown", "Static delivery"],
-  ["operation/", "Event operator", "Case writing", "Execution"]
-];
-const tools = ["Astro", "TypeScript", "Markdown", "GitHub", "RSS", "Local-first"];
-const strips = [
-  ["No. 08", "把想法变成可运行的东西"],
-  ["No. 07", "把小事认真到发光"],
-  ["No. 06", "一次清醒的重构"],
-  ["No. 05", "把周日走完"]
-];
-const workouts = [
-  ["2026-07-08", "城市夜走", "5.20 km", "1:04:18"],
-  ["2026-07-02", "滨江慢跑", "6.42 km", "0:48:05"],
-  ["2026-06-24", "公园环线", "4.98 km", "0:52:31"]
-];
-const sessions = [
-  ["Nov", "44h", "Meetings 12h · Code 8h · Docs 3h"],
-  ["Dec", "120h", "Code 36h · Meetings 22h · Docs 9h"],
-  ["Jan", "60h", "Code 19h · Meetings 13h · Design 2h"],
-  ["Feb", "58h", "Meetings 18h · Code 9h · Docs 8h"]
-];
-const readings = [
-  ["▶ Reading", "哥德尔、艾舍尔、巴赫", "★★★★★"],
-  ["Read", "我可能错了", "★★★★★"],
-  ["Read", "长期主义", "★★★★"]
-];
-const movies = [
-  ["▶ Watching", "问题餐厅", "★★★★"],
-  ["Watched", "宇宙探索编辑部", "★★★★★"],
-  ["Watched", "年会不能停", "★★★★"]
-];
+const posts = sortByDateDesc(onlyPublished(await getCollection("blog"))).slice(0, 4);
+const notes = sortByDateDesc(onlyPublished(await getCollection("notes"))).slice(0, 5);
+const feedItems = [
+  ...posts.map((post) => ({
+    type: "文章",
+    title: post.data.title,
+    description: post.data.description,
+    date: post.data.date,
+    href: `/posts/${post.slug}/`,
+    tags: post.data.tags
+  })),
+  ...notes.map((note) => ({
+    type: "随笔",
+    title: note.data.title,
+    description: note.data.description,
+    date: note.data.date,
+    href: `/notes/${note.slug}/`,
+    tags: note.data.tags
+  }))
+].sort((a, b) => b.date.valueOf() - a.date.valueOf()).slice(0, 7);
 ---
 
 <BaseLayout title={site.title} description={site.description}>
-  <main class="home-shell terminal-home">
-    <div class="lang-toggle"><button class="active">EN</button><button>CN</button></div>
-
-    <header class="profile-top">
-      <div class="pixel-avatar" aria-hidden="true"><span>RX</span></div>
-      <p>Shanghai / Remote <span>27°C</span> readers</p>
+  <main class="journal-home">
+    <header class="journal-hero">
+      <div class="journal-identity">
+        <div class="soft-avatar" aria-hidden="true">R</div>
+        <div>
+          <p class="soft-kicker">Personal Journal</p>
+          <h1>{site.author}</h1>
+          <p>{site.role} · {site.location}</p>
+        </div>
+      </div>
+      <nav class="journal-nav" aria-label="Home links">
+        <a href="/blog/">文章</a>
+        <a href="/notes/">随笔</a>
+        <a href="/photos/">照片</a>
+        <a href="/friends/">朋友</a>
+        <a class="write-link" href="/admin/?quick=note">写随笔</a>
+      </nav>
     </header>
 
-    <section class="profile-card">
-      <div class="profile-status">
-        <span class="tiny-dot"></span>
-        <span>NOW PLAYING</span>
-      </div>
-      <p class="greeting">Hi, folks. I'm</p>
-      <h1>{site.author}<span class="cursor">_</span></h1>
-      <p class="role">{site.role} @ {site.location}</p>
-      <div class="prompt-row">
-        <a href="/blog/">这个网站是怎么做的？</a>
-        <a href="/moments/">最近在做什么项目？</a>
-        <a href="/archive/">推荐篇文章</a>
-      </div>
-      <label class="terminal-input"><span>&gt;_</span><input type="text" placeholder={`和 ${site.author} 聊点什么...`} maxlength="200" /></label>
-      <nav class="home-links" aria-label="Home links">
-        <a href="/blog/">博客</a><span>/</span><a href="/moments/">频道</a><span>/</span><a href="/friends/">留言</a><span>/</span><a href="/notes/">笔记</a>
-      </nav>
-      <div class="social-row">
+    <section class="journal-intro">
+      <p class="soft-kicker">Now</p>
+      <h2>把每天发生的事、脑子里一闪而过的判断、正在做的小项目，认真留下来。</h2>
+      <p>这里会持续记录文章、随笔、照片和项目。不是为了显得很完整，而是为了让想法有一个能被回看的地方。</p>
+      <div class="soft-actions">
         {socials.map((item) => <a href={item.href}>{item.label}</a>)}
       </div>
     </section>
 
-    <section class="dashboard-grid">
-      <article class="dash-card github-card">
-        <p class="section-kicker">GitHub</p>
-        <div class="gh-header">
-          <span class="gh-avatar">R</span>
-          <h2>{site.github}</h2>
+    <section class="journal-layout">
+      <div class="journal-feed">
+        <div class="section-heading">
+          <p class="soft-kicker">Recent</p>
+          <h2>最近记录</h2>
         </div>
-        <p>Build small durable systems for writing, operations, and AI-assisted work.</p>
-        <div class="stat-grid">
-          {stats.map(([value, label]) => (
-            <div><strong>{value}</strong><span>{label}</span></div>
+        {feedItems.map((item) => (
+          <a class="feed-card" href={item.href}>
+            <div>
+              <span>{item.type}</span>
+              <time>{formatDate(item.date)}</time>
+            </div>
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+            <footer>{item.tags.map((tag) => <small>{tag}</small>)}</footer>
+          </a>
+        ))}
+      </div>
+
+      <aside class="journal-side">
+        <section class="side-panel quick-panel">
+          <p class="soft-kicker">Capture</p>
+          <h2>随手记一下</h2>
+          <p>打开后台，直接写一条随笔。内容会存成 Markdown，并自动发布到博客。</p>
+          <a href="/admin/?quick=note">+</a>
+        </section>
+
+        <section class="side-panel">
+          <div class="section-heading compact">
+            <p class="soft-kicker">Moments</p>
+            <h2>动态</h2>
+          </div>
+          {moments.slice(0, 3).map((moment) => (
+            <div class="soft-moment">
+              <time>{moment.date}</time>
+              <p>{moment.text}</p>
+            </div>
           ))}
-        </div>
-      </article>
+        </section>
 
-      {projects.map((project, index) => (
-        <article class={`dash-card project-card project-${index}`}>
-          <p class="section-kicker">项目</p>
-          <div class="project-head">
-            <span class="project-icon">{project.name.slice(0, 1)}</span>
-            <h2>{project.name}</h2>
+        <section class="side-panel">
+          <div class="section-heading compact">
+            <p class="soft-kicker">Projects</p>
+            <h2>项目</h2>
           </div>
-          <p>{project.description}</p>
-          <ul class="feature-list">
-            <li>长期维护的个人知识与内容系统</li>
-            <li>文章、笔记、动态、照片统一沉淀</li>
-            <li>RSS / sitemap / 静态发布自动生成</li>
-          </ul>
-          <div class="tag-row">{project.tags.map((tag) => <span>{tag}</span>)}</div>
-          <div class="project-actions"><a href="/archive/">→ archive</a><a href="/rss.xml">RSS ↗</a></div>
-        </article>
-      ))}
-
-      <article class="dash-card list-card posts-card">
-        <p class="section-kicker">Latest Posts</p>
-        {posts.map((post) => (
-          <a class="mini-entry" href={`/posts/${post.slug}/`}>
-            <span>{post.data.title}</span>
-            <time>{formatDate(post.data.date)}</time>
-          </a>
-        ))}
-      </article>
-
-      <article class="dash-card list-card notes-card">
-        <p class="section-kicker">Latest Notes</p>
-        {notes.map((note) => (
-          <a class="mini-entry" href={`/notes/${note.slug}/`}>
-            <span>{note.data.title}</span>
-            <time>{formatDate(note.data.date)}</time>
-          </a>
-        ))}
-      </article>
-
-      <article class="dash-card channel-card">
-        <p class="section-kicker">Channel</p>
-        {moments.map((moment) => (
-          <div class="moment-line">
-            <time>{moment.date}</time>
-            <p>{moment.text}</p>
-          </div>
-        ))}
-      </article>
-
-      <article class="dash-card strip-card">
-        <p class="section-kicker">四格 <a href="/moments/">查看全部 →</a></p>
-        <div class="strip-grid">
-          {strips.map(([no, title]) => <a href="/moments/"><span>{no}</span><strong>{title}</strong></a>)}
-        </div>
-      </article>
-
-      <article class="dash-card photo-preview">
-        <p class="section-kicker">Photos <a href="/photos/">View all →</a></p>
-        <div class="photo-strip">
-          {photos.slice(0, 6).map((photo) => <img src={photo.src} alt={photo.title} loading="lazy" />)}
-        </div>
-      </article>
-
-      <article class="dash-card workouts-card">
-        <p class="section-kicker">Workouts <a href="/moments/">View all →</a></p>
-        {workouts.map(([date, place, distance, duration]) => (
-          <div class="metric-row"><time>{date}</time><span>{place}</span><strong>{distance}</strong><em>{duration}</em></div>
-        ))}
-      </article>
-
-      <article class="dash-card skills-card">
-        <p class="section-kicker">$ tree ~/skills --level 2</p>
-        {skills.map(([group, a, b, c]) => (
-          <div class="skill-line"><strong>{group}</strong><span>├── {a}</span><span>├── {b}</span><span>└── {c}</span></div>
-        ))}
-      </article>
-
-      <article class="dash-card sessions-card">
-        <p class="section-kicker">Work Sessions</p>
-        <div class="session-total"><strong>282 h</strong><span>Total</span><strong>166 h</strong><span>Focus</span></div>
-        {sessions.map(([month, total, top], index) => (
-          <div class="session-line" style={`--bar:${42 + index * 18}%`}>
-            <span>{month}</span><div></div><strong>{total}</strong><em>{top}</em>
-          </div>
-        ))}
-      </article>
-
-      <article class="dash-card vibe-card">
-        <p class="section-kicker">Vibe Coding</p>
-        <div class="big-metrics"><div><strong>1.2M</strong><span>Tokens</span></div><div><strong>$42</strong><span>Cost</span></div><div><strong>18h</strong><span>Avg/Week</span></div></div>
-        <p>Claude Code · Primary Tool · Local notes</p>
-      </article>
-
-      <article class="dash-card mood-card">
-        <p class="section-kicker">Mood</p>
-        <div class="mood-scale"><span>rad</span><span>good</span><span>meh</span><span>bad</span><span>awful</span></div>
-        <div class="mood-dots">{Array.from({ length: 30 }).map((_, index) => <span class={`mood-dot mood-${index % 5}`}></span>)}</div>
-      </article>
-
-      <article class="dash-card activity-card">
-        <p class="section-kicker">Activity</p>
-        <div class="activity-grid">
-          <div><strong>7,842</strong><span>Steps</span></div>
-          <div><strong>6h 48m</strong><span>Sleep</span></div>
-          <div><strong>58</strong><span>Resting HR</span></div>
-          <div><strong>98%</strong><span>SpO2</span></div>
-        </div>
-      </article>
-
-      <article class="dash-card gear-card">
-        <p class="section-kicker">Software Stack</p>
-        <div class="tool-cloud">{tools.map((tool) => <span>{tool}</span>)}</div>
-        <div class="friend-mini-grid">
-          {friends.slice(0, 4).map((friend) => <a href={friend.href}>{friend.name}<small>{friend.domain}</small></a>)}
-        </div>
-      </article>
-
-      <article class="dash-card media-card">
-        <p class="section-kicker">Reading</p>
-        {readings.map(([state, title, score]) => <div class="media-line"><span>{state}</span><strong>{title}</strong><em>{score}</em></div>)}
-      </article>
-
-      <article class="dash-card media-card">
-        <p class="section-kicker">Movies</p>
-        {movies.map(([state, title, score]) => <div class="media-line"><span>{state}</span><strong>{title}</strong><em>{score}</em></div>)}
-      </article>
-
-      <article class="dash-card guestbook-card">
-        <p class="section-kicker">Guestbook</p>
-        <p class="gb-empty">Be the first to leave a message :)</p>
-        <form class="guestbook-form">
-          <label>Name · Email</label>
-          <div><span>&gt;</span><input type="text" placeholder="Type your message here..." /><button type="button">↵</button></div>
-        </form>
-        <small><span></span> AI reviewing your message, it will be visible after approval</small>
-      </article>
-
-      <article class="dash-card subscribe-card">
-        <p class="section-kicker">Subscribe</p>
-        <h2>$ subscribe --blog</h2>
-        <p>Get notified when new posts and notes are published.</p>
-        <form class="inline-subscribe" data-subscribe-form>
-          <input type="email" placeholder="email" required />
-          <button type="submit">Subscribe</button>
-        </form>
-        <small data-subscribe-status></small>
-      </article>
+          {projects.map((project) => (
+            <div class="soft-project">
+              <strong>{project.name}</strong>
+              <p>{project.description}</p>
+            </div>
+          ))}
+        </section>
+      </aside>
     </section>
-    <div class="status-line"><span class="heartbeat"><i></i><i></i><i></i><i></i><i></i></span><span>99.98% uptime</span><a href="/rss.xml">Status ↗</a></div>
-    <footer class="home-footer">Data updated on {formatDate(new Date())} · © {site.author}</footer>
+
+    <section class="photo-band">
+      <div class="section-heading">
+        <p class="soft-kicker">Photos</p>
+        <h2>最近看到的画面</h2>
+      </div>
+      <div class="soft-photo-grid">
+        {photos.slice(0, 6).map((photo) => <img src={photo.src} alt={photo.title} loading="lazy" />)}
+      </div>
+    </section>
+
+    <footer class="journal-footer">
+      <span>Updated {formatDate(new Date())}</span>
+      <a href="/rss.xml">RSS</a>
+    </footer>
   </main>
-  <script is:inline>
-    document.querySelector("[data-subscribe-form]")?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      document.querySelector("[data-subscribe-status]").textContent = "Subscribed! Check your inbox.";
-    });
-  </script>
 </BaseLayout>
