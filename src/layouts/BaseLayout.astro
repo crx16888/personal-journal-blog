@@ -40,14 +40,15 @@ const canonical = new URL(Astro.url.pathname, site.url).toString();
   </head>
   <body>
     <slot />
+    <a class="quick-compose" href="/admin/?quick=note" aria-label="写一条随笔">+</a>
     <button class="theme-switcher" type="button" aria-label="Toggle theme" data-theme-toggle>
       <span class="sun">☼</span>
       <span class="moon">☾</span>
     </button>
     <script is:inline>
       const root = document.documentElement;
-      const saved = localStorage.getItem("theme");
-      if (saved) root.dataset.theme = saved;
+      root.dataset.theme = "light";
+      localStorage.setItem("theme", "light");
       document.querySelector("[data-theme-toggle]")?.addEventListener("click", () => {
         const next = root.dataset.theme === "dark" ? "light" : "dark";
         root.dataset.theme = next;
