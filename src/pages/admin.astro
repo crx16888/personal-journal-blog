@@ -1,0 +1,412 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { site } from "../data/site";
+---
+
+<BaseLayout title={`Admin | ${site.author}`} description="私人写作后台">
+  <main class="admin-shell">
+    <section class="admin-hero">
+      <div>
+        <p class="section-kicker">Private Console</p>
+        <h1>写作后台</h1>
+        <p>文章会保存为 Markdown 文件，提交到 GitHub 后由 Zeabur 自动发布。</p>
+      </div>
+      <div class="admin-state" data-admin-state>未连接</div>
+    </section>
+
+    <section class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-panel">
+          <label>
+            GitHub Token
+            <input data-token type="password" placeholder="github_pat_..." autocomplete="off" />
+          </label>
+          <div class="admin-actions">
+            <button type="button" data-save-token>保存</button>
+            <button type="button" data-clear-token>清除</button>
+          </div>
+          <small>需要仓库 Contents 读写权限；token 只保存在当前浏览器。</small>
+        </div>
+
+        <div class="admin-panel">
+          <div class="admin-panel-head">
+            <h2>内容</h2>
+            <button type="button" data-refresh>刷新</button>
+          </div>
+          <div class="admin-tabs" role="tablist">
+            <button type="button" class="active" data-kind="blog">文章</button>
+            <button type="button" data-kind="notes">笔记</button>
+          </div>
+          <div class="admin-list" data-entry-list></div>
+        </div>
+      </aside>
+
+      <section class="admin-editor">
+        <form data-editor-form>
+          <div class="editor-topline">
+            <p class="section-kicker" data-editor-kicker>new blog post</p>
+            <div class="editor-buttons">
+              <button type="button" data-new>新建</button>
+              <button type="button" data-save-draft>保存草稿</button>
+              <button type="submit">发布</button>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              标题
+              <input data-field="title" required />
+            </label>
+            <label>
+              Slug
+              <input data-field="slug" required />
+            </label>
+            <label>
+              日期
+              <input data-field="date" type="date" required />
+            </label>
+            <label>
+              标签
+              <input data-field="tags" placeholder="AI, writing, weekly" />
+            </label>
+          </div>
+
+          <label>
+            摘要
+            <textarea data-field="description" rows="3" required></textarea>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              封面图
+              <input data-field="cover" placeholder="https://..." />
+            </label>
+            <label>
+              Deck
+              <input data-field="deck" />
+            </label>
+          </div>
+
+          <label>
+            正文
+            <textarea class="markdown-editor" data-field="body" required></textarea>
+          </label>
+        </form>
+
+        <section class="admin-preview">
+          <div class="admin-panel-head">
+            <h2>预览</h2>
+            <span data-current-path></span>
+          </div>
+          <article data-preview></article>
+        </section>
+      </section>
+    </section>
+
+    <div class="admin-toast" data-toast hidden></div>
+  </main>
+
+  <script is:inline>
+    const owner = "crx16888";
+    const repo = "personal-journal-blog";
+    const branch = "main";
+    const tokenKey = "personal-journal-blog.github-token";
+    const draftKey = "personal-journal-blog.admin-draft";
+    const apiBase = `https://api.github.com/repos/${owner}/${repo}`;
+
+    const state = {
+      token: localStorage.getItem(tokenKey) || "",
+      kind: "blog",
+      entries: [],
+      currentSha: "",
+      currentPath: "",
+      loaded: false
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const fields = {
+      title: $('[data-field="title"]'),
+      slug: $('[data-field="slug"]'),
+      date: $('[data-field="date"]'),
+      tags: $('[data-field="tags"]'),
+      description: $('[data-field="description"]'),
+      cover: $('[data-field="cover"]'),
+      deck: $('[data-field="deck"]'),
+      body: $('[data-field="body"]')
+    };
+
+    $('[data-token]').value = state.token;
+    fields.date.value = new Date().toISOString().slice(0, 10);
+    updateStatus();
+    updatePreview();
+
+    function toast(message, type = "ok") {
+      const el = $('[data-toast]');
+      el.textContent = message;
+      el.dataset.type = type;
+      el.hidden = false;
+      window.clearTimeout(toast.timer);
+      toast.timer = window.setTimeout(() => (el.hidden = true), 3600);
+    }
+
+    function updateStatus() {
+      $('[data-admin-state]').textContent = state.token ? "GitHub 已连接" : "未连接";
+      $('[data-admin-state]').dataset.connected = state.token ? "true" : "false";
+    }
+
+    function authHeaders() {
+      if (!state.token) throw new Error("请先保存 GitHub Token");
+      return {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${state.token}`,
+        "X-GitHub-Api-Version": "2022-11-28"
+      };
+    }
+
+    async function github(path, options = {}) {
+      const response = await fetch(`${apiBase}${path}`, {
+        ...options,
+        headers: {
+          ...authHeaders(),
+          ...(options.headers || {})
+        }
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || `GitHub 请求失败：${response.status}`);
+      }
+      return response.json();
+    }
+
+    function contentDir(kind = state.kind) {
+      return kind === "notes" ? "src/content/notes" : "src/content/blog";
+    }
+
+    function slugify(value) {
+      return value
+        .trim()
+        .toLowerCase()
+        .replace(/['"]/g, "")
+        .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+
+    function frontmatterValue(content, key) {
+      const match = content.match(new RegExp(`^${key}:\\\\s*(.+)$`, "m"));
+      if (!match) return "";
+      return match[1].trim().replace(/^["']|["']$/g, "");
+    }
+
+    function parseTags(content) {
+      const raw = frontmatterValue(content, "tags");
+      return raw.replace(/^\[/, "").replace(/\]$/, "").split(",").map((tag) => tag.trim().replace(/^["']|["']$/g, "")).filter(Boolean).join(", ");
+    }
+
+    function fromBase64(value) {
+      const binary = atob(value.replace(/\n/g, ""));
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+
+    function toBase64(value) {
+      const bytes = new TextEncoder().encode(value);
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary);
+    }
+
+    function parseContent(file, text) {
+      const body = text.replace(/^---[\s\S]*?---\s*/, "");
+      const slug = file.name.replace(/\.md$/, "");
+      return {
+        name: file.name,
+        path: file.path,
+        sha: file.sha,
+        slug,
+        title: frontmatterValue(text, "title") || slug,
+        description: frontmatterValue(text, "description"),
+        date: frontmatterValue(text, "date"),
+        tags: parseTags(text),
+        cover: frontmatterValue(text, "cover"),
+        deck: frontmatterValue(text, "deck"),
+        body
+      };
+    }
+
+    async function loadEntries() {
+      const files = await github(`/contents/${contentDir()}?ref=${branch}`);
+      const markdownFiles = files.filter((file) => file.type === "file" && file.name.endsWith(".md"));
+      const entries = await Promise.all(markdownFiles.map(async (file) => {
+        const data = await github(`/contents/${file.path}?ref=${branch}`);
+        const text = fromBase64(data.content);
+        return parseContent(file, text);
+      }));
+      state.entries = entries.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      state.loaded = true;
+      renderEntries();
+    }
+
+    function renderEntries() {
+      const list = $('[data-entry-list]');
+      list.innerHTML = "";
+      if (!state.loaded) {
+        list.innerHTML = '<p class="empty-list">保存 Token 后刷新。</p>';
+        return;
+      }
+      if (!state.entries.length) {
+        list.innerHTML = '<p class="empty-list">暂无内容。</p>';
+        return;
+      }
+      for (const entry of state.entries) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "entry-button";
+        button.innerHTML = `<strong>${entry.title}</strong><span>${entry.date || entry.slug}</span>`;
+        button.addEventListener("click", () => loadEntry(entry));
+        list.append(button);
+      }
+    }
+
+    function loadEntry(entry) {
+      state.currentSha = entry.sha;
+      state.currentPath = entry.path;
+      for (const [key, input] of Object.entries(fields)) input.value = entry[key] || "";
+      $('[data-editor-kicker]').textContent = `edit ${state.kind}`;
+      $('[data-current-path]').textContent = entry.path;
+      updatePreview();
+    }
+
+    function resetEditor() {
+      state.currentSha = "";
+      state.currentPath = "";
+      for (const input of Object.values(fields)) input.value = "";
+      fields.date.value = new Date().toISOString().slice(0, 10);
+      $('[data-editor-kicker]').textContent = `new ${state.kind}`;
+      $('[data-current-path]').textContent = "";
+      updatePreview();
+    }
+
+    function editorData() {
+      const title = fields.title.value.trim();
+      const slug = slugify(fields.slug.value || title);
+      return {
+        title,
+        slug,
+        date: fields.date.value,
+        description: fields.description.value.trim(),
+        tags: fields.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+        cover: fields.cover.value.trim(),
+        deck: fields.deck.value.trim(),
+        body: fields.body.value.trim()
+      };
+    }
+
+    function markdownFromData(data) {
+      const optional = [
+        data.deck ? `deck: "${data.deck.replace(/"/g, '\\"')}"` : "",
+        data.cover ? `cover: "${data.cover.replace(/"/g, '\\"')}"` : ""
+      ].filter(Boolean).join("\n");
+      return `---\ntitle: "${data.title.replace(/"/g, '\\"')}"\ndescription: "${data.description.replace(/"/g, '\\"')}"\n${optional ? `${optional}\n` : ""}date: ${data.date}\ntags: [${data.tags.map((tag) => `"${tag.replace(/"/g, '\\"')}"`).join(", ")}]\n---\n\n${data.body}\n`;
+    }
+
+    async function publish(event) {
+      event.preventDefault();
+      const data = editorData();
+      if (!data.title || !data.slug || !data.date || !data.description || !data.body) {
+        toast("请补齐标题、Slug、日期、摘要和正文。", "error");
+        return;
+      }
+      const path = `${contentDir()}/${data.slug}.md`;
+      const payload = {
+        message: `${state.currentSha ? "Update" : "Publish"} ${state.kind}: ${data.title}`,
+        content: toBase64(markdownFromData(data)),
+        branch
+      };
+      if (state.currentSha && state.currentPath === path) payload.sha = state.currentSha;
+      if (state.currentSha && state.currentPath !== path) {
+        const existing = await github(`/contents/${state.currentPath}?ref=${branch}`);
+        await github(`/contents/${state.currentPath}`, {
+          method: "DELETE",
+          body: JSON.stringify({
+            message: `Rename ${state.kind}: ${data.title}`,
+            sha: existing.sha,
+            branch
+          })
+        });
+      }
+      if (!payload.sha) {
+        const existing = await fetch(`${apiBase}/contents/${path}?ref=${branch}`, { headers: authHeaders() });
+        if (existing.ok) payload.sha = (await existing.json()).sha;
+      }
+      const result = await github(`/contents/${path}`, {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+      state.currentSha = result.content.sha;
+      state.currentPath = path;
+      $('[data-current-path]').textContent = path;
+      localStorage.removeItem(draftKey);
+      toast("已发布到 GitHub，Zeabur 会自动部署。");
+      await loadEntries();
+    }
+
+    function updatePreview() {
+      const data = editorData();
+      $('[data-current-path]').textContent = state.currentPath || `${contentDir()}/${data.slug || "new-post"}.md`;
+      $('[data-preview]').innerHTML = `
+        <h1>${data.title || "未命名"}</h1>
+        <p>${data.description || ""}</p>
+        <time>${data.date || ""}</time>
+        <div>${data.body.split("\n").slice(0, 12).map((line) => line ? `<p>${line.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "<br>").join("")}</div>
+      `;
+      if (!fields.slug.value && data.title) fields.slug.value = slugify(data.title);
+    }
+
+    $('[data-save-token]').addEventListener("click", async () => {
+      state.token = $('[data-token]').value.trim();
+      if (state.token) localStorage.setItem(tokenKey, state.token);
+      updateStatus();
+      toast("Token 已保存。");
+      await loadEntries().catch((error) => toast(error.message, "error"));
+    });
+
+    $('[data-clear-token]').addEventListener("click", () => {
+      state.token = "";
+      $('[data-token]').value = "";
+      localStorage.removeItem(tokenKey);
+      updateStatus();
+      toast("Token 已清除。");
+    });
+
+    $('[data-refresh]').addEventListener("click", () => loadEntries().catch((error) => toast(error.message, "error")));
+    $('[data-new]').addEventListener("click", resetEditor);
+    $('[data-save-draft]').addEventListener("click", () => {
+      localStorage.setItem(draftKey, JSON.stringify({ kind: state.kind, data: editorData() }));
+      toast("草稿已保存在当前浏览器。");
+    });
+    $('[data-editor-form]').addEventListener("submit", (event) => publish(event).catch((error) => toast(error.message, "error")));
+    for (const input of Object.values(fields)) input.addEventListener("input", updatePreview);
+    document.querySelectorAll("[data-kind]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        document.querySelectorAll("[data-kind]").forEach((item) => item.classList.toggle("active", item === button));
+        state.kind = button.dataset.kind;
+        resetEditor();
+        await loadEntries().catch((error) => toast(error.message, "error"));
+      });
+    });
+
+    const draft = localStorage.getItem(draftKey);
+    if (draft) {
+      try {
+        const saved = JSON.parse(draft);
+        if (saved?.data) {
+          state.kind = saved.kind || state.kind;
+          for (const [key, value] of Object.entries(saved.data)) if (fields[key]) fields[key].value = Array.isArray(value) ? value.join(", ") : value;
+          updatePreview();
+        }
+      } catch {}
+    }
+    renderEntries();
+    if (state.token) loadEntries().catch((error) => toast(error.message, "error"));
+  </script>
+</BaseLayout>
