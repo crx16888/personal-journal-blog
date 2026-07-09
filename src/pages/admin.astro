@@ -116,7 +116,7 @@ import { site } from "../data/site";
 
     const state = {
       token: localStorage.getItem(tokenKey) || "",
-      kind: "blog",
+      kind: new URLSearchParams(location.search).get("quick") === "note" ? "notes" : "blog",
       entries: [],
       currentSha: "",
       currentPath: "",
@@ -405,6 +405,11 @@ import { site } from "../data/site";
           updatePreview();
         }
       } catch {}
+    }
+    document.querySelectorAll("[data-kind]").forEach((item) => item.classList.toggle("active", item.dataset.kind === state.kind));
+    if (new URLSearchParams(location.search).get("quick") === "note") {
+      $('[data-editor-kicker]').textContent = "quick note";
+      setTimeout(() => fields.body.focus(), 100);
     }
     renderEntries();
     if (state.token) loadEntries().catch((error) => toast(error.message, "error"));
