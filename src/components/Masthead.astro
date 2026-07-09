@@ -1,0 +1,26 @@
+---
+import { navItems, site } from "../data/site";
+
+interface Props {
+  date?: string;
+}
+
+const { date } = Astro.props;
+---
+
+<header class="masthead">
+  <div class="mast-inner">
+    <div class="mast-top-rule"></div>
+    <div class="mast-bar">
+      <a class="mast-brand" href="/blog/">{site.name}</a>
+      {date && <span class="mast-date">{date}</span>}
+      <nav class="mast-links" aria-label="Main navigation">
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+    </div>
+    <div class="mast-lang-line">
+      <span class="lang-switch"><strong>中</strong><span> · </span><a href="/">EN</a></span>
+    </div>
+    <div class="mast-bottom-rule"></div>
+  </div>
+</header>

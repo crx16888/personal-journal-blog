@@ -1,0 +1,29 @@
+---
+import { getCollection } from "astro:content";
+import Masthead from "../../components/Masthead.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { onlyPublished, sortByDateDesc, formatDate } from "../../lib/content";
+import { site } from "../../data/site";
+
+const notes = sortByDateDesc(onlyPublished(await getCollection("notes")));
+---
+
+<BaseLayout title={`Notes | ${site.author}`} description="短笔记列表">
+  <Masthead />
+  <main class="listing-page notes-page">
+    <header class="page-header">
+      <p class="section-kicker">Notes</p>
+      <h1>笔记</h1>
+      <p>更短、更聚焦的材料沉淀。</p>
+    </header>
+    <section class="note-list">
+      {notes.map((note) => (
+        <a class="note-card" href={`/notes/${note.slug}/`}>
+          <time>{formatDate(note.data.date)}</time>
+          <h2>{note.data.title}</h2>
+          <p>{note.data.description}</p>
+        </a>
+      ))}
+    </section>
+  </main>
+</BaseLayout>

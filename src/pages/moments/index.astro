@@ -1,0 +1,25 @@
+---
+import Masthead from "../../components/Masthead.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { moments, site } from "../../data/site";
+---
+
+<BaseLayout title={`Moment | ${site.author}`} description="短动态">
+  <Masthead />
+  <main class="listing-page moments-page">
+    <header class="page-header">
+      <p class="section-kicker">Moment</p>
+      <h1>瞬间</h1>
+      <p>介于微博和日记之间的短记录。</p>
+    </header>
+    <section class="timeline">
+      {moments.map((moment) => (
+        <article class="timeline-item">
+          <time>{moment.date}</time>
+          <p>{moment.text}</p>
+          <span>{moment.source}</span>
+        </article>
+      ))}
+    </section>
+  </main>
+</BaseLayout>

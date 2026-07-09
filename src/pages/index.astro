@@ -1,0 +1,92 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import { onlyPublished, sortByDateDesc, formatDate } from "../lib/content";
+import { friends, moments, photos, projects, site, socials } from "../data/site";
+
+const posts = sortByDateDesc(onlyPublished(await getCollection("blog"))).slice(0, 4);
+const notes = sortByDateDesc(onlyPublished(await getCollection("notes"))).slice(0, 3);
+---
+
+<BaseLayout title={site.title} description={site.description}>
+  <main class="home-shell">
+    <div class="lang-toggle"><button class="active">EN</button><button>CN</button></div>
+    <section class="home-hero-card">
+      <div class="now-playing">
+        <span class="record"></span>
+        <span>NOW WRITING</span>
+      </div>
+      <p class="greeting">Hi, folks. I'm</p>
+      <h1>{site.author}<span class="cursor">_</span></h1>
+      <p class="role">{site.role} @ {site.location}</p>
+      <div class="terminal-chat">
+        <p><span>&gt;</span> 这个网站可以用来写长文、发短帖、记笔记、放照片和整理友链。</p>
+        <p><span>&gt;</span> 所有内容都在 Markdown / 数据文件里，适合长期维护。</p>
+      </div>
+      <nav class="home-links" aria-label="Home links">
+        <a href="/blog/">Blog</a><span>/</span><a href="/notes/">Notes</a><span>/</span><a href="/archive/">Archive</a>
+      </nav>
+      <div class="social-row">
+        {socials.map((item) => <a href={item.href}>{item.label}</a>)}
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="dash-card feature-card">
+        <p class="section-kicker">Latest Posts</p>
+        {posts.map((post) => (
+          <a class="mini-entry" href={`/posts/${post.slug}/`}>
+            <span>{post.data.title}</span>
+            <time>{formatDate(post.data.date)}</time>
+          </a>
+        ))}
+      </div>
+
+      <div class="dash-card">
+        <p class="section-kicker">Project</p>
+        {projects.map((project) => (
+          <div class="project-block">
+            <h2>{project.name}</h2>
+            <p>{project.description}</p>
+            <div class="tag-row">{project.tags.map((tag) => <span>{tag}</span>)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div class="dash-card">
+        <p class="section-kicker">Moment</p>
+        {moments.map((moment) => (
+          <div class="moment-line">
+            <time>{moment.date}</time>
+            <p>{moment.text}</p>
+          </div>
+        ))}
+      </div>
+
+      <div class="dash-card photo-preview">
+        <p class="section-kicker">Photos</p>
+        <div class="photo-strip">
+          {photos.slice(0, 4).map((photo) => <img src={photo.src} alt={photo.title} loading="lazy" />)}
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <p class="section-kicker">Notes</p>
+        {notes.map((note) => (
+          <a class="mini-entry" href={`/notes/${note.slug}/`}>
+            <span>{note.data.title}</span>
+            <time>{formatDate(note.data.date)}</time>
+          </a>
+        ))}
+      </div>
+
+      <div class="dash-card">
+        <p class="section-kicker">Friends</p>
+        <div class="friend-mini-grid">
+          {friends.slice(0, 6).map((friend) => <a href={friend.href}>{friend.name}<small>{friend.domain}</small></a>)}
+        </div>
+      </div>
+    </section>
+    <footer class="home-footer">Data updated on {formatDate(new Date())} · © {site.author}</footer>
+  </main>
+</BaseLayout>

@@ -1,0 +1,28 @@
+---
+import { getCollection, render } from "astro:content";
+import Masthead from "../../components/Masthead.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { formatDate, onlyPublished } from "../../lib/content";
+import { site } from "../../data/site";
+
+export async function getStaticPaths() {
+  const notes = onlyPublished(await getCollection("notes"));
+  return notes.map((note) => ({ params: { slug: note.slug }, props: { note } }));
+}
+
+const { note } = Astro.props;
+const { Content } = await render(note);
+---
+
+<BaseLayout title={`${note.data.title} | Notes`} description={note.data.description} type="article">
+  <Masthead date={formatDate(note.data.date)} />
+  <main class="note-detail">
+    <header>
+      <p class="section-kicker">Note</p>
+      <h1>{note.data.title}</h1>
+      <p>{note.data.description}</p>
+    </header>
+    <article class="post-content compact"><Content /></article>
+    <footer class="page-footer"><a href="/notes/">← Notes</a><span>© {site.author}</span><a href="/blog/">Blog →</a></footer>
+  </main>
+</BaseLayout>

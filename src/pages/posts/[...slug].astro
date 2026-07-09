@@ -1,0 +1,106 @@
+---
+import { getCollection, render } from "astro:content";
+import Masthead from "../../components/Masthead.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { estimateReadingMinutes, formatDate, onlyPublished, sortByDateDesc } from "../../lib/content";
+import { site } from "../../data/site";
+
+export async function getStaticPaths() {
+  const posts = onlyPublished(await getCollection("blog"));
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+const posts = sortByDateDesc(onlyPublished(await getCollection("blog")));
+const related = posts.filter((entry) => entry.slug !== post.slug).slice(0, 5);
+const readMinutes = estimateReadingMinutes(post.body ?? "");
+---
+
+<BaseLayout
+  title={`${post.data.title} | ${site.author}`}
+  description={post.data.description}
+  image={post.data.cover}
+  type="article"
+>
+  <article class="post-page">
+    <Masthead date={formatDate(post.data.date)} />
+    <section class="headline-section">
+      <div class="headline-inner">
+        <div class="headline-tags">{post.data.tags.map((tag) => <a class="hl-tag" href={`/tags/${tag}/`}>{tag}</a>)}</div>
+        <h1 class="headline">{post.data.title}</h1>
+      </div>
+    </section>
+    {post.data.cover && (
+      <div class="cover-section">
+        <img src={post.data.cover} alt={post.data.title} loading="lazy" decoding="async" />
+        <p class="post-deck">{post.data.deck ?? post.data.description}</p>
+      </div>
+    )}
+    <div class="content-grid">
+      <aside class="sidebar-left">
+        <div class="sb-block"><div class="sb-label">Date</div><div class="sb-value">{formatDate(post.data.date)}</div></div>
+        <div class="sb-block"><div class="sb-label">Author</div><div class="sb-value"><a href="/">{site.author}</a></div></div>
+        <div class="sb-block"><div class="sb-label">Read</div><div class="sb-value">{readMinutes} min</div></div>
+        <div class="sb-block"><div class="sb-label">Tags</div><div class="sb-tags">{post.data.tags.map((tag) => <a class="sb-tag" href={`/tags/${tag}/`}>#{tag}</a>)}</div></div>
+        <div class="sb-divider"></div>
+        <div class="sb-block toc-block">
+          <div class="sb-label">Contents</div>
+          <nav class="toc-nav">
+            {headings.filter((h) => h.depth < 4).map((heading) => <a class={`depth-${heading.depth}`} href={`#${heading.slug}`}>{heading.text}</a>)}
+          </nav>
+        </div>
+        <div class="sb-divider"></div>
+        <div class="sb-block">
+          <div class="sb-label">Related</div>
+          <ul class="sb-related">{related.map((entry) => <li><a href={`/posts/${entry.slug}/`}>{entry.data.title}</a></li>)}</ul>
+        </div>
+        <a class="sb-nav" href="/archive/">← All Posts</a>
+      </aside>
+      <div class="post-content">
+        <Content />
+        <div class="article-coda" aria-hidden="true">
+          <div class="coda-date">{formatDate(post.data.date)}</div>
+          <div class="coda-mark">✦</div>
+        </div>
+      </div>
+      <aside class="comment-rail">
+        <div class="cr-header"><span class="cr-label">Comments</span></div>
+        <div class="cr-empty"><p>Select text to add a local note.</p></div>
+      </aside>
+    </div>
+    <section class="article-like-section">
+      <button class="article-like-btn" type="button" data-like-button><span data-like-count>0</span><span> likes</span></button>
+      <span class="online-indicator">1 人在读</span>
+    </section>
+    <section class="newsletter-cta">
+      <p class="nl-title">Subscribe</p>
+      <p class="nl-desc">Get notified when new posts are published.</p>
+      <form class="nl-form" data-subscribe-form>
+        <input class="nl-input" type="email" placeholder="your@email.com" required />
+        <button class="nl-btn" type="submit">Subscribe</button>
+      </form>
+      <p class="nl-status" data-subscribe-status></p>
+    </section>
+    <footer class="page-footer">
+      <a href="/">← Home</a>
+      <span>© {site.author}</span>
+      <a href="/archive/">Archive →</a>
+    </footer>
+  </article>
+  <script is:inline>
+    const likeButton = document.querySelector("[data-like-button]");
+    const likeCount = document.querySelector("[data-like-count]");
+    const likeKey = `likes:${location.pathname}`;
+    likeCount.textContent = localStorage.getItem(likeKey) || "0";
+    likeButton?.addEventListener("click", () => {
+      const next = Number(localStorage.getItem(likeKey) || "0") + 1;
+      localStorage.setItem(likeKey, String(next));
+      likeCount.textContent = String(next);
+    });
+    document.querySelector("[data-subscribe-form]")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      document.querySelector("[data-subscribe-status]").textContent = "已记录在本地演示中；接入邮件服务后即可真实订阅。";
+    });
+  </script>
+</BaseLayout>

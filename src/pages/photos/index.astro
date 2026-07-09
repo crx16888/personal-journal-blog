@@ -1,0 +1,24 @@
+---
+import Masthead from "../../components/Masthead.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { photos, site } from "../../data/site";
+---
+
+<BaseLayout title={`Photos | ${site.author}`} description="照片墙">
+  <Masthead />
+  <main class="photos-page">
+    <header class="photo-header">
+      <p class="section-kicker">Photos</p>
+      <h1>照片</h1>
+      <p>把一些视觉线索放在这里，作为文章之外的记忆索引。</p>
+    </header>
+    <ul class="photo-grid">
+      {photos.map((photo) => (
+        <li class="photo-card" style={`--dom:${photo.color}`}>
+          <img src={photo.src} alt={photo.title} loading="lazy" decoding="async" />
+          <span>{photo.title}</span>
+        </li>
+      ))}
+    </ul>
+  </main>
+</BaseLayout>

@@ -1,0 +1,29 @@
+---
+import Masthead from "../components/Masthead.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { friends, site } from "../data/site";
+---
+
+<BaseLayout title={`Friends | ${site.author}`} description="朋友们的博客和链接">
+  <Masthead />
+  <main class="listing-page friends-page">
+    <header class="page-header">
+      <p class="section-kicker">Friends</p>
+      <h1>友链</h1>
+      <p>朋友们的博客，以及可以继续探索的网页。</p>
+      <p class="page-checked">上次检测：2026年7月8日</p>
+    </header>
+    <section class="friends-grid">
+      {friends.map((friend) => (
+        <a class={`friend-card fc-${friend.status}`} href={friend.href} target="_blank" rel="noopener noreferrer">
+          <div class="fc-top">
+            <img src={`https://www.google.com/s2/favicons?domain=${friend.domain}&sz=32`} alt="" loading="lazy" width="16" height="16" />
+            <span class={`fc-status fc-status-${friend.status}`} title={friend.status}></span>
+          </div>
+          <span class="fc-name">{friend.name}</span>
+          <span class="fc-domain">{friend.domain}</span>
+        </a>
+      ))}
+    </section>
+  </main>
+</BaseLayout>
