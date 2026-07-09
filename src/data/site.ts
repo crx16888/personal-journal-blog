@@ -3,7 +3,7 @@ export const site = {
   author: "Rongxian",
   title: "Rongxian — Builder & Blogger",
   description: "一个用于记录项目、文章、笔记、照片和朋友链接的个人博客。",
-  url: "https://example.com",
+  url: "https://personal-journal-blog.zeabur.app",
   location: "Shanghai / Remote",
   role: "AI Builder · Operator · Writer",
   since: "2026-07-08",
